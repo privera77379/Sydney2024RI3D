@@ -17,7 +17,15 @@
 #include "joystick.cpp"
 
 using namespace vex;
+using signature = vision::signature;
+using code = vision::code;
 
+enum gameElements {
+  mobileGoal,
+  redRing,
+  blueRing,
+};
+using gameElements = enum gameElements;
 competition  Competition;
 
 motor leftFrontDriveMotor = motor(PORT17, ratio18_1, false);
@@ -37,6 +45,12 @@ motor mogo = motor(PORT12, ratio36_1, false);
 motor upperarm = motor(PORT11, ratio6_1, false);
 motor lowerarm = motor(PORT5, ratio18_1, true);
 motor plunger = motor(PORT13, ratio18_1, false);
+//vision vision15 = vision(PORT15);
+distance distanceSensor = distance(PORT14);
+aivision::colordesc AIVision15__Red(1, 214, 66, 112, 35, 0.44);
+aivision::colordesc AIVision15__Blue(2, 63, 168, 198, 30, 0.68);
+aivision::colordesc AIVision15__Mogo(3, 126, 161, 87, 31, 0.57);
+vex::aivision AIVision15(PORT15, AIVision15__Red, AIVision15__Blue, AIVision15__Mogo, aivision::ALL_AIOBJS);
 //using the climb group to run the new arm group to have two different motor carts run in tandem
 controller con1 = controller(primary);
 
@@ -123,10 +137,10 @@ void usercontrol(void) {
   int mogotuningvariable = 0;
   int startpos = 0;
   int upperstartpos = 0 + tuningvariable;
-  int mogopos = 1600 + tuningvariable;
-  int wallpos = 3200 + tuningvariable;
-  int intakepos = -250 + tuningvariable;
-  int pushpos = -600;
+  int mogopos = 1550 + tuningvariable;
+  int wallpos = 3100 + tuningvariable;
+  int intakepos = -650 + tuningvariable;
+  int pushpos = -800;
   int retractpos = 0;
   int mogotracker = 0;
   int plungertracker = 0;
@@ -141,22 +155,25 @@ void usercontrol(void) {
   plunger.setTimeout(2 , seconds);
   con1.Screen.clearScreen();
   con1.Screen.setCursor(1, 1);
+  upperarm.setStopping(hold);
+  double ringcheck = 0.0;
+  double ringturncheck = 0.0;
+  double ringdifference = 0.0;
+double objdistance = 0.0;
   //con1.Screen.print("toggle tracker: %d", toggletracker);
   while(true)
   {
+    AIVision15.takeSnapshot(AIVision15__Mogo);
+con1.Screen.clearScreen();
+con1.Screen.setCursor(2, 1);
+    con1.Screen.print("object at: (%d, %d)", AIVision15.largestObject.centerX, AIVision15.largestObject.centerY);
+    con1.Screen.setCursor(3, 1);
+    objdistance = distanceSensor.objectDistance(inches);
+    con1.Screen.print("distance: %f", objdistance);
+
     Drives::fieldOriented();
     //zeroes inertial sensor
-    if(con1.ButtonX.pressing()) {
-      inertialSens.setHeading(0.0, degrees);
-      inertialSens.setRotation(0.0, degrees);
-      inertialSens.startCalibration();
-      con1.rumble(".");
-      while (inertialSens.isCalibrating()) {
-          task::sleep(10);
-      }
-      inertialSens.setHeading(0.0, degrees);
-      inertialSens.setRotation(0.0, degrees);
-    }
+    
 
 
     if(mogo.position(degrees) < (-180)){
@@ -210,8 +227,63 @@ void usercontrol(void) {
     
     if (toggletracker==0) {
 
+if(con1.ButtonX.pressing()) {
+
+ringcheck = distanceSensor.objectDistance(inches);
+if (ringcheck < 8.0)
+{
+if (ringcheck <0.1)
+{
+  Drives::robotOriented(0.0, 0.0, 0.0);
+  con1.rumble(". .");
+}
+
+else if (ringcheck > 0.5) {
+  
+Drives::robotOriented(0.0, 0.0, 10.0);
+wait(50, msec);
+ringturncheck = distanceSensor.objectDistance(inches);
+if(ringcheck - ringturncheck > 0.0) {
+ringcheck = ringcheck - ringturncheck;
+ringdifference = ringcheck - ringturncheck;
+  while(ringcheck >= ringdifference)
+  {
+    ringcheck = ringdifference;
+    wait(50, msec);
+    ringdifference = ringturncheck - distanceSensor.objectDistance(inches);
+  }
+  Drives::robotOriented(0.0, 0.0, 0.0);
+  Drives::robotOriented(0.0, 10.0, 0.0);
+  waitUntil(distanceSensor.objectDistance(inches) <= 0.5);
+  con1.rumble("_");
+}
+else {
+  ringcheck = distanceSensor.objectDistance(inches);
+  Drives::robotOriented(0.0, 0.0, -10.0);
+  wait(50, msec);
+  ringturncheck = distanceSensor.objectDistance(inches);
+  if(ringcheck - ringturncheck > 0.0) {
+  ringcheck = ringcheck - ringturncheck;
+  ringdifference = ringcheck - ringturncheck;
+    while(ringcheck >= ringdifference)
+    {
+      ringcheck = ringdifference;
+      wait(50, msec);
+      ringdifference = ringturncheck - distanceSensor.objectDistance(inches);
+    }
+    Drives::robotOriented(0.0, 0.0, 0.0);
+    Drives::robotOriented(0.0, 10.0, 0.0);
+    waitUntil(distanceSensor.objectDistance(inches) <= 0.5);
+  con1.rumble("_");
+}
+else {Drives::robotOriented(0.0, 0.0, 0.0);}
+}
+}
+}
+}
+
 if(con1.ButtonB.pressing()) {
-  upperarm.setPosition(0, degrees);
+  mogo.setPosition(0, degrees);
   con1.Screen.clearScreen();
   con1.Screen.setCursor(1, 1);
   con1.Screen.print("upperarm position: %d", upperarm.position(degrees));
@@ -230,6 +302,140 @@ if(con1.ButtonB.pressing()) {
           con1.Screen.print("Error: mogo tracker not set to 0 or 1");
        }
       }
+       if (con1.ButtonL2.pressing()) {
+
+        AIVision15.takeSnapshot(AIVision15__Mogo);
+        if(AIVision15.objectCount > 0 && distanceSensor.objectDistance(inches) < 24) {
+          // Object detected
+          int centerX = AIVision15.largestObject.centerX;
+
+          if (centerX < 165) {
+              // Object is on the left
+              Drives::robotOriented(0.0, 0.0, -10.0); 
+              while(AIVision15.largestObject.centerX <= 145 && distanceSensor.objectDistance(inches) < 24 && AIVision15.objectCount > 0)
+              {
+                AIVision15.takeSnapshot(AIVision15__Mogo);
+              }
+              Drives::robotOriented(0.0, 0.0, -5.0); // Turn left
+              while(AIVision15.largestObject.centerX <= 160 && distanceSensor.objectDistance(inches) < 24 && AIVision15.objectCount > 0)
+              {
+                AIVision15.takeSnapshot(AIVision15__Mogo);
+              }
+              Drives::robotOriented(0.0, 0.0, 0.0); // Stop
+              // Turn left
+              con1.rumble("_");
+          }
+        
+          else if (centerX > 175) {
+              // Object is on the right
+              Drives::robotOriented(0.0, 0.0, 10.0); // Turn right
+              while(AIVision15.largestObject.centerX >= 195 && distanceSensor.objectDistance(inches) < 22 && AIVision15.objectCount > 0)
+
+              {
+                AIVision15.takeSnapshot(AIVision15__Mogo);
+              }
+              Drives::robotOriented(0.0, 0.0, 5.0); // Turn right
+              while(AIVision15.largestObject.centerX >= 180 && distanceSensor.objectDistance(inches) < 22 && AIVision15.objectCount > 0)
+              {
+                AIVision15.takeSnapshot(AIVision15__Mogo);
+              }
+              Drives::robotOriented(0.0, 0.0, 0.0); // Stop
+              con1.rumble("_");
+          }
+          
+          else if(centerX >= 165 && centerX <= 175) {
+            Drives::robotOriented(0.0, 0.0, 0.0);
+            con1.rumble(". .");
+             // Stop
+            if (distanceSensor.objectDistance(inches) < 5.0) {
+              Drives::robotOriented(0.0, -15.0, 0.0);
+              waitUntil(distanceSensor.objectDistance(inches) >= 5.0);
+              Drives::robotOriented(0.0, 0.0, 0.0); // Stop
+               // Stop
+               
+               if (centerX < 165) {
+                // Object is on the left
+                Drives::robotOriented(0.0, 0.0, -10.0); 
+                while(AIVision15.largestObject.centerX <= 150 && distanceSensor.objectDistance(inches) < 22 && AIVision15.objectCount > 0)
+                {
+                  AIVision15.takeSnapshot(AIVision15__Mogo);
+                }
+                Drives::robotOriented(0.0, 0.0, -5.0); // Turn left
+                while(AIVision15.largestObject.centerX <= 160 && distanceSensor.objectDistance(inches) < 22 && AIVision15.objectCount > 0)
+                {
+                  AIVision15.takeSnapshot(AIVision15__Mogo);
+                }
+                Drives::robotOriented(0.0, 0.0, 0.0); // Stop
+                // Turn left
+                con1.rumble("_ _");
+            }
+          
+            else if (centerX > 175) {
+                // Object is on the right
+                Drives::robotOriented(0.0, 0.0, 10.0); // Turn right
+                while(AIVision15.largestObject.centerX >= 195 && distanceSensor.objectDistance(inches) < 22 && AIVision15.objectCount > 0)
+  
+                {
+                  AIVision15.takeSnapshot(AIVision15__Mogo);
+                }
+                Drives::robotOriented(0.0, 0.0, 5.0); // Turn right
+                while(AIVision15.largestObject.centerX >= 180 && distanceSensor.objectDistance(inches) < 22 && AIVision15.objectCount > 0)
+                {
+                  AIVision15.takeSnapshot(AIVision15__Mogo);
+                }
+                Drives::robotOriented(0.0, 0.0, 0.0); // Stop
+                
+            }
+            con1.rumble("_ _");
+            }
+            else if (distanceSensor.objectDistance(inches) > 5.1) {
+              Drives::robotOriented(0.0, 15.0, 0.0);
+              waitUntil(distanceSensor.objectDistance(inches) <= 5.1);
+              Drives::robotOriented(0.0, 0.0, 0.0); // Stop
+               // Stop
+
+               if (centerX < 165) {
+                // Object is on the left
+                Drives::robotOriented(0.0, 0.0, -10.0); 
+                while(AIVision15.largestObject.centerX <= 150 && distanceSensor.objectDistance(inches) < 22 && AIVision15.objectCount > 0)
+                {
+                  AIVision15.takeSnapshot(AIVision15__Mogo);
+                }
+                Drives::robotOriented(0.0, 0.0, -5.0); // Turn left
+                while(AIVision15.largestObject.centerX <= 160 && distanceSensor.objectDistance(inches) < 22 && AIVision15.objectCount > 0)
+                {
+                  AIVision15.takeSnapshot(AIVision15__Mogo);
+                }
+                Drives::robotOriented(0.0, 0.0, 0.0); // Stop
+                // Turn left
+
+            }
+          
+            else if (centerX > 175) {
+                // Object is on the right
+                Drives::robotOriented(0.0, 0.0, 10.0); // Turn right
+                while(AIVision15.largestObject.centerX >= 190 && distanceSensor.objectDistance(inches) < 22 && AIVision15.objectCount > 0)
+  
+                {
+                  AIVision15.takeSnapshot(AIVision15__Mogo);
+                }
+                Drives::robotOriented(0.0, 0.0, 5.0); // Turn right
+                while(AIVision15.largestObject.centerX >= 180 && distanceSensor.objectDistance(inches) < 22 && AIVision15.objectCount > 0)
+                {
+                  AIVision15.takeSnapshot(AIVision15__Mogo);
+                }
+                Drives::robotOriented(0.0, 0.0, 0.0); // Stop
+
+            }
+            con1.rumble("_ _");
+            }
+          }
+          }
+
+      task::sleep(20); // Small delay to prevent CPU overload
+  }
+
+      
       if (con1.ButtonR1.pressing()){
         if(upperarm.position(degrees) < (-100)) {
           upperarm.spinToPosition(upperstartpos, degrees, false);        
@@ -250,7 +456,7 @@ if(con1.ButtonB.pressing()) {
         else if(upperarm.position(degrees) > (1500)) {
           upperarm.spinToPosition(startpos, degrees, false);
        }
-        else if(upperarm.position(degrees) > (-15)){
+        else if(upperarm.position(degrees) > (-25)){
             upperarm.spinToPosition(intakepos, degrees, false);
        } 
      }
@@ -288,11 +494,23 @@ Drives::turnToHeading(270.0, 100.0);
     }
     if (toggletracker==1) {
 
+      if(con1.ButtonX.pressing()) {
+        inertialSens.setHeading(0.0, degrees);
+        inertialSens.setRotation(0.0, degrees);
+        inertialSens.startCalibration();
+        con1.rumble(".");
+        while (inertialSens.isCalibrating()) {
+            task::sleep(10);
+        }
+        inertialSens.setHeading(0.0, degrees);
+        inertialSens.setRotation(0.0, degrees);
+      }
+
       if(con1.ButtonB.pressing()) {
-        mogo.setPosition(0, degrees);
+        upperarm.setPosition(0, degrees);
         con1.Screen.clearScreen();
         con1.Screen.setCursor(1, 1);
-        con1.Screen.print("mogo position: %d", mogo.position(degrees));
+        con1.Screen.print("upperarmreset");
       }
     
       if (con1.ButtonL1.pressing()) {
@@ -368,12 +586,15 @@ void auton(void) {
   int upperstartpos = 50 + tuningvariable;
   int mogopos = 1600 + tuningvariable;
   int intakepos = -650 + tuningvariable;
-  int intakeposabsolute = std::abs(intakepos);
-  int pushpos = -600;
+  int pushpos = -800;
   int retractpos = 0;
+  int intakeposabsolute = std::abs(intakepos);
 
 
-  int autonchoice = 2;
+  int autonchoice = 4;
+
+
+  upperarm.setStopping(hold);
                                          
 if(autonchoice == 1) {
   //Redsoloautonslot1 
@@ -684,6 +905,7 @@ if (std::abs(leftFrontDriveMotor.position(degrees)) >= calRotation(24.25))
 Drives::robotOriented(0.0, 0.0, 0.0);
 
 plunger.spinToPosition(pushpos, degrees, true);
+plunger.spinToPosition(retractpos, degrees, true);
 
 frontDriveMotor.setPosition(0, degrees);
 Drives::robotOriented(30.0, 0.0, 0.0);
@@ -708,6 +930,7 @@ if (std::abs(leftFrontDriveMotor.position(degrees)) >= calRotation(24.25))
 Drives::robotOriented(0.0, 0.0, 0.0);
 
 plunger.spinToPosition(pushpos, degrees, true);
+plunger.spinToPosition(retractpos, degrees, true);
 
 frontDriveMotor.setPosition(0, degrees);
 Drives::robotOriented(-30.0, 0.0, 0.0);
@@ -721,39 +944,39 @@ Drives::robotOriented(0.0, 0.0, 0.0);
 
   //set subsystems at a standardized height pre-match set up slot 8
   
-  mogo.setMaxTorque(20, pct);
-  mogo.setVelocity(40, pct);
+
   upperarm.setMaxTorque(70, pct);
   upperarm.setVelocity(30, pct);
-  mogo.spin(reverse);
   upperarm.setStopping(coast);
   upperarm.spin(reverse);
   task::sleep(3000);
   upperarm.stop();
-  mogo.spin(forward);
-  task::sleep(4000);
-  mogo.stop();
   upperarm.setPosition(0, degrees);
   upperarm.setMaxTorque(100, pct);
 upperarm.spinToPosition(intakeposabsolute, degrees, true);
+inertialSens.setHeading(0.0, degrees);
+  inertialSens.setRotation(0.0, degrees);
+  upperarm.setPosition(0, degrees);
+  inertialSens.startCalibration();
+  while(inertialSens.isCalibrating()) {
+    task::sleep(10);
   }
+  inertialSens.setHeading(0.0, degrees);
+  inertialSens.setRotation(0.0, degrees);
+  }
+
 
   if(autonchoice == 6) {
 
     //Risky faster red right slot 6
     //redrightautonslot6
 
-    
-  inertialSens.setHeading(270.0, degrees);
-  inertialSens.setRotation(270.0, degrees);
-  inertialSens.startCalibration();
-  while(inertialSens.isCalibrating()) {
-    task::sleep(10);
-  }
+
   inertialSens.setHeading(270.0, degrees);
   inertialSens.setRotation(270.0, degrees);
 
-
+task::sleep(20);
+  upperarm.setPosition(0, degrees);
 upperarm.spinToPosition(upperstartpos + 50, degrees, false);
 
 
@@ -771,7 +994,7 @@ if (std::abs(frontDriveMotor.position(degrees)) >= calRotation(34.25))//if the f
 }
 Drives::robotOriented(0.0, 0.0, 0.0);//stops the robot from turning
 //first drive direction Y axis code same as x but with y
-Drives::turnToHeading(270.0, 30);
+Drives::turnToHeading(270.0, 30); 
 Drives::turnToHeading(270.0, 10.0);
 upperarm.setTimeout(2, seconds);
 upperarm.spinToPosition(intakepos-50, degrees, true);
@@ -892,16 +1115,12 @@ Drives::robotOriented(0.0, 0.0, 0.0);
 
 if(autonchoice == 7) {
   //riskybluerleftautonslot7
-  inertialSens.setHeading(90.0, degrees);
-  inertialSens.setRotation(90.0, degrees);
-  inertialSens.startCalibration();
-  while(inertialSens.isCalibrating()) {
-    task::sleep(10);
-  }
+ 
   inertialSens.setHeading(90.0, degrees);
   inertialSens.setRotation(90.0, degrees);
 
-
+  task::sleep(20);
+  upperarm.setPosition(0, degrees);
 upperarm.spinToPosition(upperstartpos + 50, degrees, false);
 
 
