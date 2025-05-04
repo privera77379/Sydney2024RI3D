@@ -591,7 +591,7 @@ void auton(void) {
   int intakeposabsolute = std::abs(intakepos);
 
 
-  int autonchoice = 4;
+  int autonchoice = 7;
 
 
   upperarm.setStopping(hold);
@@ -896,12 +896,7 @@ upperarm.spinToPosition(mogopos, degrees, true);
 
 leftFrontDriveMotor.setPosition(0, degrees);
 Drives::robotOriented(0.0, 50.0, 0.0);
-waitUntil(std::abs(leftFrontDriveMotor.position(degrees)) >= calRotation(24.0));
-if (std::abs(leftFrontDriveMotor.position(degrees)) >= calRotation(24.25))
- {
-  Drives::robotOriented(0.0, -15.0, 0.0);
-  waitUntil(std::abs(leftFrontDriveMotor.position(degrees)) <= calRotation(24.1));
-}
+waitUntil(distanceSensor.objectDistance(inches) <= 5.1);
 Drives::robotOriented(0.0, 0.0, 0.0);
 
 plunger.spinToPosition(pushpos, degrees, true);
@@ -921,12 +916,7 @@ upperarm.spinToPosition(mogopos, degrees, true);
 
 leftFrontDriveMotor.setPosition(0, degrees);
 Drives::robotOriented(0.0, 50.0, 0.0);
-waitUntil(std::abs(leftFrontDriveMotor.position(degrees)) >= calRotation(24.0));
-if (std::abs(leftFrontDriveMotor.position(degrees)) >= calRotation(24.25))
- {
-  Drives::robotOriented(0.0, -15.0, 0.0);
-  waitUntil(std::abs(leftFrontDriveMotor.position(degrees)) <= calRotation(24.1));
-}
+waitUntil(distanceSensor.objectDistance(inches) <= 5.1);
 Drives::robotOriented(0.0, 0.0, 0.0);
 
 plunger.spinToPosition(pushpos, degrees, true);
@@ -986,12 +976,15 @@ Drives::robotOriented(0.0, 0.0, 0.0);//stops the robot from turning
 //first drive direction X axis code
 frontDriveMotor.setPosition(0, degrees);//sets the front drive motor to 0 degrees
 Drives::robotOriented(60.0, 0.0, 0.0);//sets motors to drive in negitive x based on robot
-waitUntil(std::abs(frontDriveMotor.position(degrees)) >= calRotation(34.0));//waits until the front drive motor hits the degrees of rotation to hit 30inches
+/*waitUntil(std::abs(frontDriveMotor.position(degrees)) >= calRotation(34.0));//waits until the front drive motor hits the degrees of rotation to hit 30inches
 if (std::abs(frontDriveMotor.position(degrees)) >= calRotation(34.25))//if the front drive motor has rotate enought to have moved 30.25 inches or more
 {
   Drives::robotOriented(-15.0, 0.0, 0.0);//turns the robot right to correct for overshoot
   waitUntil(std::abs(frontDriveMotor.position(degrees)) <= calRotation(34.1));////waits until the front drive motor is at 30.1 or less inches of travel based on rotation
 }
+  */
+  waitUntil(std::abs(frontDriveMotor.position(degrees)) >= calRotation(20.0));
+  waitUntil(distanceSensor.objectDistance(inches) <= 0.8);
 Drives::robotOriented(0.0, 0.0, 0.0);//stops the robot from turning
 //first drive direction Y axis code same as x but with y
 Drives::turnToHeading(270.0, 30); 
@@ -1027,6 +1020,140 @@ if (std::abs(leftFrontDriveMotor.position(degrees)) >= calRotation(17.75))
 }
 Drives::robotOriented(0.0, 0.0, 0.0);
 
+//test alignment
+
+
+
+AIVision15.takeSnapshot(AIVision15__Mogo);
+        if(AIVision15.objectCount > 0 && distanceSensor.objectDistance(inches) < 24) {
+          // Object detected
+          int centerX = AIVision15.largestObject.centerX;
+
+          if (centerX < 165) {
+              // Object is on the left
+              Drives::robotOriented(0.0, 0.0, -10.0); 
+              while(AIVision15.largestObject.centerX <= 145 && distanceSensor.objectDistance(inches) < 24 && AIVision15.objectCount > 0)
+              {
+                AIVision15.takeSnapshot(AIVision15__Mogo);
+              }
+              Drives::robotOriented(0.0, 0.0, -5.0); // Turn left
+              while(AIVision15.largestObject.centerX <= 160 && distanceSensor.objectDistance(inches) < 24 && AIVision15.objectCount > 0)
+              {
+                AIVision15.takeSnapshot(AIVision15__Mogo);
+              }
+              Drives::robotOriented(0.0, 0.0, 0.0); // Stop
+              // Turn left
+              con1.rumble("_");
+          }
+        
+          else if (centerX > 175) {
+              // Object is on the right
+              Drives::robotOriented(0.0, 0.0, 10.0); // Turn right
+              while(AIVision15.largestObject.centerX >= 195 && distanceSensor.objectDistance(inches) < 22 && AIVision15.objectCount > 0)
+
+              {
+                AIVision15.takeSnapshot(AIVision15__Mogo);
+              }
+              Drives::robotOriented(0.0, 0.0, 5.0); // Turn right
+              while(AIVision15.largestObject.centerX >= 180 && distanceSensor.objectDistance(inches) < 22 && AIVision15.objectCount > 0)
+              {
+                AIVision15.takeSnapshot(AIVision15__Mogo);
+              }
+              Drives::robotOriented(0.0, 0.0, 0.0); // Stop
+              con1.rumble("_");
+          }
+          
+          else if(centerX >= 165 && centerX <= 175) {
+            Drives::robotOriented(0.0, 0.0, 0.0);
+            con1.rumble(". .");
+             // Stop
+            if (distanceSensor.objectDistance(inches) < 5.0) {
+              Drives::robotOriented(0.0, -15.0, 0.0);
+              waitUntil(distanceSensor.objectDistance(inches) >= 5.0);
+              Drives::robotOriented(0.0, 0.0, 0.0); // Stop
+               // Stop
+               
+               if (centerX < 165) {
+                // Object is on the left
+                Drives::robotOriented(0.0, 0.0, -10.0); 
+                while(AIVision15.largestObject.centerX <= 150 && distanceSensor.objectDistance(inches) < 22 && AIVision15.objectCount > 0)
+                {
+                  AIVision15.takeSnapshot(AIVision15__Mogo);
+                }
+                Drives::robotOriented(0.0, 0.0, -5.0); // Turn left
+                while(AIVision15.largestObject.centerX <= 160 && distanceSensor.objectDistance(inches) < 22 && AIVision15.objectCount > 0)
+                {
+                  AIVision15.takeSnapshot(AIVision15__Mogo);
+                }
+                Drives::robotOriented(0.0, 0.0, 0.0); // Stop
+                // Turn left
+                con1.rumble("_ _");
+            }
+          
+            else if (centerX > 175) {
+                // Object is on the right
+                Drives::robotOriented(0.0, 0.0, 10.0); // Turn right
+                while(AIVision15.largestObject.centerX >= 195 && distanceSensor.objectDistance(inches) < 22 && AIVision15.objectCount > 0)
+  
+                {
+                  AIVision15.takeSnapshot(AIVision15__Mogo);
+                }
+                Drives::robotOriented(0.0, 0.0, 5.0); // Turn right
+                while(AIVision15.largestObject.centerX >= 180 && distanceSensor.objectDistance(inches) < 22 && AIVision15.objectCount > 0)
+                {
+                  AIVision15.takeSnapshot(AIVision15__Mogo);
+                }
+                Drives::robotOriented(0.0, 0.0, 0.0); // Stop
+                
+            }
+            con1.rumble("_ _");
+          }
+          else if (distanceSensor.objectDistance(inches) > 5.1) {
+            Drives::robotOriented(0.0, 15.0, 0.0);
+            waitUntil(distanceSensor.objectDistance(inches) <= 5.1);
+            Drives::robotOriented(0.0, 0.0, 0.0); // Stop
+             // Stop
+
+             if (centerX < 165) {
+              // Object is on the left
+              Drives::robotOriented(0.0, 0.0, -10.0); 
+              while(AIVision15.largestObject.centerX <= 150 && distanceSensor.objectDistance(inches) < 22 && AIVision15.objectCount > 0)
+              {
+                AIVision15.takeSnapshot(AIVision15__Mogo);
+              }
+              Drives::robotOriented(0.0, 0.0, -5.0); // Turn left
+              while(AIVision15.largestObject.centerX <= 160 && distanceSensor.objectDistance(inches) < 22 && AIVision15.objectCount > 0)
+              {
+                AIVision15.takeSnapshot(AIVision15__Mogo);
+              }
+              Drives::robotOriented(0.0, 0.0, 0.0); // Stop
+              // Turn left
+
+          }
+        
+          else if (centerX > 175) {
+              // Object is on the right
+              Drives::robotOriented(0.0, 0.0, 10.0); // Turn right
+              while(AIVision15.largestObject.centerX >= 190 && distanceSensor.objectDistance(inches) < 22 && AIVision15.objectCount > 0)
+
+              {
+                AIVision15.takeSnapshot(AIVision15__Mogo);
+              }
+              Drives::robotOriented(0.0, 0.0, 5.0); // Turn right
+              while(AIVision15.largestObject.centerX >= 180 && distanceSensor.objectDistance(inches) < 22 && AIVision15.objectCount > 0)
+              {
+                AIVision15.takeSnapshot(AIVision15__Mogo);
+              }
+              Drives::robotOriented(0.0, 0.0, 0.0); // Stop
+
+          }
+          con1.rumble("_ _");
+          }
+        }
+      }
+//end of test alignment
+
+
 plunger.spinToPosition(pushpos, degrees, true);
 plunger.spinToPosition(retractpos, degrees, true);
 upperarm.spinToPosition(mogopos+200, degrees, true);
@@ -1038,28 +1165,27 @@ upperarm.spinToPosition(mogopos-50, degrees, true);
 upperarm.spinToPosition(mogopos, degrees, true);
 plunger.spinToPosition(retractpos, degrees, false);
 
+Drives::turnToHeading(270.0, 20.0);
+Drives::turnToHeading(270.0, 10.0);
 
 frontDriveMotor.setPosition(0, degrees);
-Drives::robotOriented(-60.0, 0.0, 0.0);
-waitUntil(std::abs(frontDriveMotor.position(degrees)) >= calRotation(28.0));
-if (std::abs(frontDriveMotor.position(degrees)) >= calRotation(28.25))
-{
-  Drives::robotOriented(15.0, 0.0, 0.0);
-  waitUntil(std::abs(frontDriveMotor.position(degrees)) <= calRotation(28.1));
-}
+Drives::robotOriented(-70.0, 0.0, 0.0);
+waitUntil(distanceSensor.objectDistance(inches)>10);
+waitUntil(distanceSensor.objectDistance(inches)<30);
+double pos1 = frontDriveMotor.position(degrees);
+Drives::robotOriented(-30.0, 0.0, 0.0);
+waitUntil(distanceSensor.objectDistance(inches)>30);
 Drives::robotOriented(0.0, 0.0, 0.0);
-
-
+double pos2 = frontDriveMotor.position(degrees);
+double pos1point5 = (pos1 + pos2) / 2   ;
+Drives::robotOriented(30.0, 0.0, 0.0);
+waitUntil(frontDriveMotor.position(degrees) == pos1point5);
+Drives::robotOriented(0.0, 0.0, 0.0);
 upperarm.spinToPosition(mogopos-900, degrees, true);
 leftFrontDriveMotor.setPosition(0, degrees);
 Drives::turnToHeading(270.0, 20.0);
 Drives::robotOriented(0.0, 80.0, 0.0);
-waitUntil(std::abs(leftFrontDriveMotor.position(degrees)) >= calRotation(21.0));
-if (std::abs(leftFrontDriveMotor.position(degrees)) >= calRotation(21.25))
-{
-  Drives::robotOriented(0.0, -15.0, 0.0);
-  waitUntil(std::abs(leftFrontDriveMotor.position(degrees)) <= calRotation(21.1));
-}
+waitUntil(distanceSensor.objectDistance(inches)< 0.8);
 Drives::robotOriented(0.0, 0.0, 0.0);
 
 
@@ -1130,19 +1256,24 @@ Drives::robotOriented(0.0, 0.0, 0.0);//stops the robot from turning
 //first drive direction X axis code
 frontDriveMotor.setPosition(0, degrees);//sets the front drive motor to 0 degrees
 Drives::robotOriented(-60.0, 0.0, 0.0);//sets motors to drive in negitive x based on robot
-waitUntil(std::abs(frontDriveMotor.position(degrees)) >= calRotation(34.0));//waits until the front drive motor hits the degrees of rotation to hit 30inches
+waitUntil(std::abs(frontDriveMotor.position(degrees)) >= calRotation(12.0));
+Drives::robotOriented(-50.0, 0.0, 0.0);
+waitUntil(distanceSensor.objectDistance(inches) <= 2.0|| std::abs(frontDriveMotor.position(degrees)) >= calRotation(34.0));
+/*waitUntil(std::abs(frontDriveMotor.position(degrees)) >= calRotation(34.0));//waits until the front drive motor hits the degrees of rotation to hit 30inches
 if (std::abs(frontDriveMotor.position(degrees)) >= calRotation(34.25))//if the front drive motor has rotate enought to have moved 30.25 inches or more
 {
   Drives::robotOriented(15.0, 0.0, 0.0);//turns the robot right to correct for overshoot
   waitUntil(std::abs(frontDriveMotor.position(degrees)) <= calRotation(34.1));////waits until the front drive motor is at 30.1 or less inches of travel based on rotation
-}
+}*/
+Drives::robotOriented(15.0, 0.0, 0.0);
+wait(500, msec);//stops the robot from turning
 Drives::robotOriented(0.0, 0.0, 0.0);//stops the robot from turning
 //first drive direction Y axis code same as x but with y
 Drives::turnToHeading(90.0, 30);
 Drives::turnToHeading(90.0, 10.0);
 upperarm.setTimeout(2, seconds);
 upperarm.spinToPosition(intakepos-50, degrees, true);
-wait(500, msec);
+wait(200, msec);
 
 Drives::robotOriented(0.0, 0.0, 0.0);
 task::sleep(20);
@@ -1170,7 +1301,138 @@ if (std::abs(leftFrontDriveMotor.position(degrees)) >= calRotation(17.75))
   waitUntil(std::abs(leftFrontDriveMotor.position(degrees)) <= calRotation(17.6));
 }
 Drives::robotOriented(0.0, 0.0, 0.0);
+//test alignment
 
+
+
+AIVision15.takeSnapshot(AIVision15__Mogo);
+        if(AIVision15.objectCount > 0 && distanceSensor.objectDistance(inches) < 24) {
+          // Object detected
+          int centerX = AIVision15.largestObject.centerX;
+
+          if (centerX < 165) {
+              // Object is on the left
+              Drives::robotOriented(0.0, 0.0, -10.0); 
+              while(AIVision15.largestObject.centerX <= 145 && distanceSensor.objectDistance(inches) < 24 && AIVision15.objectCount > 0)
+              {
+                AIVision15.takeSnapshot(AIVision15__Mogo);
+              }
+              Drives::robotOriented(0.0, 0.0, -5.0); // Turn left
+              while(AIVision15.largestObject.centerX <= 160 && distanceSensor.objectDistance(inches) < 24 && AIVision15.objectCount > 0)
+              {
+                AIVision15.takeSnapshot(AIVision15__Mogo);
+              }
+              Drives::robotOriented(0.0, 0.0, 0.0); // Stop
+              // Turn left
+              con1.rumble("_");
+          }
+        
+          else if (centerX > 175) {
+              // Object is on the right
+              Drives::robotOriented(0.0, 0.0, 10.0); // Turn right
+              while(AIVision15.largestObject.centerX >= 195 && distanceSensor.objectDistance(inches) < 22 && AIVision15.objectCount > 0)
+
+              {
+                AIVision15.takeSnapshot(AIVision15__Mogo);
+              }
+              Drives::robotOriented(0.0, 0.0, 5.0); // Turn right
+              while(AIVision15.largestObject.centerX >= 180 && distanceSensor.objectDistance(inches) < 22 && AIVision15.objectCount > 0)
+              {
+                AIVision15.takeSnapshot(AIVision15__Mogo);
+              }
+              Drives::robotOriented(0.0, 0.0, 0.0); // Stop
+              con1.rumble("_");
+          }
+          
+          else if(centerX >= 165 && centerX <= 175) {
+            Drives::robotOriented(0.0, 0.0, 0.0);
+            con1.rumble(". .");
+             // Stop
+            if (distanceSensor.objectDistance(inches) < 5.0) {
+              Drives::robotOriented(0.0, -15.0, 0.0);
+              waitUntil(distanceSensor.objectDistance(inches) >= 5.0);
+              Drives::robotOriented(0.0, 0.0, 0.0); // Stop
+               // Stop
+               
+               if (centerX < 165) {
+                // Object is on the left
+                Drives::robotOriented(0.0, 0.0, -10.0); 
+                while(AIVision15.largestObject.centerX <= 150 && distanceSensor.objectDistance(inches) < 22 && AIVision15.objectCount > 0)
+                {
+                  AIVision15.takeSnapshot(AIVision15__Mogo);
+                }
+                Drives::robotOriented(0.0, 0.0, -5.0); // Turn left
+                while(AIVision15.largestObject.centerX <= 160 && distanceSensor.objectDistance(inches) < 22 && AIVision15.objectCount > 0)
+                {
+                  AIVision15.takeSnapshot(AIVision15__Mogo);
+                }
+                Drives::robotOriented(0.0, 0.0, 0.0); // Stop
+                // Turn left
+                con1.rumble("_ _");
+            }
+          
+            else if (centerX > 175) {
+                // Object is on the right
+                Drives::robotOriented(0.0, 0.0, 10.0); // Turn right
+                while(AIVision15.largestObject.centerX >= 195 && distanceSensor.objectDistance(inches) < 22 && AIVision15.objectCount > 0)
+  
+                {
+                  AIVision15.takeSnapshot(AIVision15__Mogo);
+                }
+                Drives::robotOriented(0.0, 0.0, 5.0); // Turn right
+                while(AIVision15.largestObject.centerX >= 180 && distanceSensor.objectDistance(inches) < 22 && AIVision15.objectCount > 0)
+                {
+                  AIVision15.takeSnapshot(AIVision15__Mogo);
+                }
+                Drives::robotOriented(0.0, 0.0, 0.0); // Stop
+                
+            }
+            con1.rumble("_ _");
+          }
+          else if (distanceSensor.objectDistance(inches) > 5.1) {
+            Drives::robotOriented(0.0, 15.0, 0.0);
+            waitUntil(distanceSensor.objectDistance(inches) <= 5.1);
+            Drives::robotOriented(0.0, 0.0, 0.0); // Stop
+             // Stop
+
+             if (centerX < 165) {
+              // Object is on the left
+              Drives::robotOriented(0.0, 0.0, -10.0); 
+              while(AIVision15.largestObject.centerX <= 150 && distanceSensor.objectDistance(inches) < 22 && AIVision15.objectCount > 0)
+              {
+                AIVision15.takeSnapshot(AIVision15__Mogo);
+              }
+              Drives::robotOriented(0.0, 0.0, -5.0); // Turn left
+              while(AIVision15.largestObject.centerX <= 160 && distanceSensor.objectDistance(inches) < 22 && AIVision15.objectCount > 0)
+              {
+                AIVision15.takeSnapshot(AIVision15__Mogo);
+              }
+              Drives::robotOriented(0.0, 0.0, 0.0); // Stop
+              // Turn left
+
+          }
+        
+          else if (centerX > 175) {
+              // Object is on the right
+              Drives::robotOriented(0.0, 0.0, 10.0); // Turn right
+              while(AIVision15.largestObject.centerX >= 190 && distanceSensor.objectDistance(inches) < 22 && AIVision15.objectCount > 0)
+
+              {
+                AIVision15.takeSnapshot(AIVision15__Mogo);
+              }
+              Drives::robotOriented(0.0, 0.0, 5.0); // Turn right
+              while(AIVision15.largestObject.centerX >= 180 && distanceSensor.objectDistance(inches) < 22 && AIVision15.objectCount > 0)
+              {
+                AIVision15.takeSnapshot(AIVision15__Mogo);
+              }
+              Drives::robotOriented(0.0, 0.0, 0.0); // Stop
+
+          }
+          con1.rumble("_ _");
+          }
+        }
+      }
+//end of test alignment
 plunger.spinToPosition(pushpos, degrees, true);
 plunger.spinToPosition(retractpos, degrees, true);
 upperarm.spinToPosition(mogopos+200, degrees, true);
@@ -1182,15 +1444,19 @@ upperarm.spinToPosition(mogopos-50, degrees, true);
 upperarm.spinToPosition(mogopos, degrees, true);
 plunger.spinToPosition(retractpos, degrees, false);
 
+Drives::turnToHeading(90.0, 20.0);
+Drives::turnToHeading(90.0, 10.0);
 
 frontDriveMotor.setPosition(0, degrees);
-Drives::robotOriented(60.0, 0.0, 0.0);
-waitUntil(std::abs(frontDriveMotor.position(degrees)) >= calRotation(28.0));
-if (std::abs(frontDriveMotor.position(degrees)) >= calRotation(28.25))
-{
-  Drives::robotOriented(-15.0, 0.0, 0.0);
-  waitUntil(std::abs(frontDriveMotor.position(degrees)) <= calRotation(28.1));
-}
+Drives::robotOriented(70.0, 0.0, 0.0);
+waitUntil(distanceSensor.objectDistance(inches)>10);
+wait(500, msec);
+waitUntil(distanceSensor.objectDistance(inches)<36);
+Drives::robotOriented(0.0, 0.0, 0.0);
+upperarm.spinToPosition(mogopos-900, degrees, true);
+leftFrontDriveMotor.setPosition(0, degrees);
+Drives::robotOriented(0.0, 80.0, 0.0);
+waitUntil(distanceSensor.objectDistance(inches)< 0.8);
 Drives::robotOriented(0.0, 0.0, 0.0);
 
 
